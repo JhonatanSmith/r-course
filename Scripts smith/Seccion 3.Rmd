@@ -1,0 +1,241 @@
+---
+title: "Seccion 3: Los datos y como procesarlos"
+author: "Jhonatan Smith"
+date: "2022-12-19"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Existen muchos tipos de datos con ,os que se desea trabajar. Para ello entonces, se aprenderá como manipular de diferentes fuentes.
+
+Ya se sabe utilizar tablas de sxcel, csv y demas. Ahora, se procede con...
+
+# XML
+
+Estos son los formatos de los archivos cuando se requiere trabajar con archivos de internet. 
+
+```{r}
+
+#install.packages("XML")
+require(XML)
+```
+
+Ete es el paquete con el que se han de cargar ficheros XML que es basicamente un encriptado de informacion. Ahora, lo otro que se realizará es cargar dos ficheros que estan en la carpeta de este proyecto.
+
+
+```{r}
+url = "../Escritorio/GitHub/r-course/data/tema1/cd_catalog.xml"
+xmldoc = xmlParse(url)
+```
+
+en este paso, se crea el 'apuntador' o fn de memoria que localiza el fichero o documento. Estoe stá 'crudo'; por tanto ha de recorrerse para poder trabajar con el correctamente.
+
+```{r}
+rootnode <- xmlRoot(xmldoc)
+rootnode[1]
+```
+
+Este es primer elemento del nodo raiz. Tenemos titulo, artista, pus, compañia, precio y año
+
+
+Note que aqui, los datos se requieren ser extraidos del XML. Es decir, rootnode almacena toda la infroamcion, al abrir el archivo note que los XML guardan informacion en fn de la etiqueta. Entonces es necesario extraerlos uno a uno. 
+
+## Dataframe a partir de un XML
+
+Vamos ahora a crear un data frame a partr de un XML
+
+```{r}
+cds_data <-  xmlSApply(rootnode, function(x) xmlSApply(x,xmlValue))
+```
+
+Este comando es que, itera varias veces y aplica una fn al XML
+
+```{r message=FALSE, warning=FALSE}
+require(tidyverse)
+cds_data %>% View()
+```
+
+Note que el formato esta feo. Hay que cambiarlo
+
+```{r}
+cds.catalog <- data.frame(t(cds_data), row.names = NULL)
+cds.catalog
+```
+Esto puede ser tan complejo como sea ek XL con el que se este trrabajando. INVESTIGAR SOBRE BASES DE DATOS DE XML. 
+
+Aprenda sobre:
+
+ 1) xpathSApply(
+ 2) getNodeSet()
+
+
+## Otro ejercicio :
+
+
+Ahora vamos a realizar una extraccion de una informacion de una hmtl de una pagina web (guardad en la carpeta del curso)
+
+```{r}
+population.url <- "../Escritorio/GitHub/r-course/data/tema1/WorldPopulation-wiki.html"
+```
+
+Aca se carga la url de la pagina donde se va a trabajar. Ahora;suponga que se desea extraer las tablas de dicha pagina entonces:
+
+
+```{r}
+tables <- readHTMLTable(population.url)
+```
+
+Esto devuelve una lista de tablas. Esto es una lista de listas. Entonces lo que se podria hacer es acceder a una directamente de ellas.
+
+```{r}
+most.populated <-  tables[[6]]
+most.populated
+```
+En el proceso anterior se selecciono todas las tablas y a partir de ellas se trabajó. 
+
+Suponga que yo a priori se con cual debo de trabajar. Si ese es el caso..,
+
+```{r}
+custom.table <- readHTMLTable(population.url, which = 6)
+custom.table
+```
+
+Sale la misma lista que antes pero, asi no se saca toda la tabla. Depende de la pagina, eso podria ser dificil de sacar. 
+
+# Archivos JSON:
+
+Son otro tipo de archivo muy comun utilizado en datos de internet
+
+```{r}
+#install.packages('jsonlite')
+require(jsonlite)
+```
+
+
+Vamos ahora a trabajar con algunos archivos de juguyete. 
+
+```{r}
+dat.1 <- fromJSON('../data/tema1/students.json')
+dat.1
+```
+
+```{r}
+dat.2 <- fromJSON('../data/tema1/student-courses.json')
+dat.2
+```
+
+Note que al inscribir los datos de un json directamente los organiza en un dataframe
+
+
+
+## Yahoo finance:
+
+Un ejemplo de donde sacar informacion de finanzas. Se trabajará con un archivo json importado de una url. 
+
+```{r}
+#install.packages('curl')
+require(curl)
+```
+```{r}
+url1 <- 'http://www.floatrates.com/daily/usd.json'
+url2 <- 'https://query2.finance.yahoo.com/v10/finance/quoteSummary/AAPL?modules=assetProfile,balanceSheetHistory,balanceSheetHistoryQuarterly,calendarEvents,cashflowStatementHistory,cashflowStatementHistoryQuarterly,defaultKeyStatistics,earnings,earningsHistory,earningsTrend,financialData,fundOwnership,incomeStatementHistory,incomeStatementHistoryQuarterly,indexTrend,industryTrend,insiderHolders,insiderTransactions,institutionOwnership,majorDirectHolders,majorHoldersBreakdown,netSharePurchaseActivity,price,quoteType,recommendationTrend,secFilings,sectorTrend,summaryDetail,summaryProfile,symbol,upgradeDowngradeHistory,fundProfile,topHoldings,fundPerformance'
+```
+
+```{r}
+a <- fromJSON(url1)
+b <- fromJSON(url2)
+```
+
+```{r}
+currency.data <- a$eur
+```
+
+# Ficheros de anchura fijada
+
+Basicamente los espacios que giardan los datos con unespacio
+
+Si se analzia este archivo txt se da cuenta que es un fichero sin cabecera. No solo eso, tambien es un archivo que el digitado de los dtos es dado por el espacio. Entonces se ha de contar la longitud de los caracteres. 
+
+```{r}
+students.data <- read.fwf('../data/tema1/student-fwf.txt', 
+                          widths = c(4,15,20,15,4),
+                          col.names =c('id','nombre','email', 
+                                       'carrera','año'))
+students.data
+```
+# Ficheros Rata y rds
+
+Formato especifico para cargarlos y demas. 
+
+```{r}
+clientes <- c('juan gabriel', 'ricardo','pedro')
+fechas <- c("2017-12-27", "2017-11-1", "2018-1-1")
+
+```
+
+Amos son strings. 
+
+```{r}
+
+fechas = fechas %>% as.Date()
+pago <- c(315,192.55,40.15)
+pedidos <- data.frame(clientes,fechas,pago)
+pedidos
+```
+
+
+Hemos creado un data.frame; vamos a exportar ese data.frame y lo exportamos. Vamos a guardar un objeto de R en un fichero determinado.
+
+
+```{r}
+save(pedidos, file = "../data/tema1/pedidos.Rdata")
+saveRDS(pedidos, file = "../data/tema1/pedidos.rds")
+```
+
+Es buena practica limpiar la memoria para eliminar los datos y pendejadas que no se van a seguir utilizando. Con la intencion de no ocupar memoria
+
+
+```{r}
+remove(pedidos)
+
+```
+
+## Para cargar archivos de R
+
+```{r}
+load("../data/tema1/pedidos.Rdata")
+```
+
+```{r}
+orders <- readRDS("../data/tema1/pedidos.rds")
+```
+
+## Otra fora
+
+```{r}
+smith = "smith"
+save(list = c("pedidos","smith"), file = "../data/tema1/smith.rdata")
+```
+
+
+
+## save.image
+
+Esto es util para guardar toda la sesion que se esta trabajando en R
+
+```{r}
+save.image("../data/tema1/sesionsmith.data")
+```
+
+
+# Algunos datasets utiles
+
+```{r}
+data("iris")
+data("cars")
+```
+
+
