@@ -1,0 +1,347 @@
+---
+title: "Seccion 3.2 : limpieza de datos"
+author: "Jhonatan Smith"
+date: "2022-12-21"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Eliminar datos con na.omit
+
+Esto se hace cuando el dato no nos interesa y no tiene un valor per se. Se trabajará con un scv de ejemplo 
+
+```{r}
+data <- read.csv("../data/tema1/missing-data.csv")
+data
+```
+Note que en general,  lo que faltan son NA de strings, entonces una mejor forma de leer el archivo es
+
+```{r}
+data <- read.csv("../data/tema1/missing-data.csv", na.strings = "")
+data
+```
+
+Ya es al menos, se han convertido en NA. ¿Como se limpia?
+
+```{r}
+data.cleaned <- na.omit(data)
+data.cleaned
+```
+
+Esta fn lo qu eha hecho es eliminar entonces los na del conjunto de datos. Antes, 27 registros ahora; 23
+
+Lo que utiliza na.omit es coger la fn is.na para hacer todo esto. 
+
+```{r}
+is.na(data[4,2])
+```
+
+
+```{r}
+is.na(data$Income)
+```
+
+# Limpieza selectiva de los datos sin valor:
+
+
+Suponga que solo me interesa eliminar na de la columna de ingresos.
+
+```{r}
+# Na limpios de la vble income
+data.income.cleaned <- data[!is.na(data$Income),]
+data.income.cleaned
+```
+
+## Complete cases
+
+Esta funcion lo que hace es que asocia una matriz boolean de t y F a las observaciones de los datos(matriz)
+
+```{r}
+# filas completa para un df
+complete.cases(data)
+```
+Me dice que las obvservaciones 4,6 etc son observaciones con datos faltantes. 
+
+```{r}
+data.cleaned.2 <- data[complete.cases(data),]
+data.cleaned.2
+```
+
+Note que es tambien un filtro para los NA
+
+## Ejercicio 2: 
+
+Novierra los ceros en NA. Note que un ingreso cero (0) no necesariamente es un dato. Entonces, esto puede ser un NA. 
+
+```{r}
+# Convirtiendo ceros en NA en los datos originales
+
+data$Income[data$Income==0]<- NA
+
+```
+
+# Reemplazo de NA con la media o extraccion aleatoria
+
+```{r}
+data <- read.csv("../data/tema1/missing-data.csv", na.strings = "")
+data
+```
+
+Ifelse <- Si el dato que tengo es un NA entonces reemplacelo con la media.
+
+Si no, dejelo igual
+
+```{r}
+data$Income.mean = ifelse(is.na(data$Income), 
+                          mean(data$Income, na.rm = TRUE),
+                          data$Income)
+  
+  data
+```
+
+## Reemplazo aleatorio
+
+```{r}
+rand.impute <- function(x){ # X vector de datos con NA
+  missing <- is.na(x) #missing es un vector de tamaño de X con TRUE y FALSE
+  n.missing <- sum(missing) #Sumo el numero de TRUE, cuantos valores NA hay
+  x.obs <- x[!missing] # valores differtente de NA de X
+  imputed <- x
+  # Los valores que faltaban, se reemplzada por los valores que si se conocen (MAS)
+  imputed[missing]<- sample(x.obs, n.missing,replace = T)
+  return(imputed)
+}
+```
+
+
+```{r}
+
+# Una fn para correr rand.impute en cada una de las columnas del dataframe que tengo
+
+random.impute.data.frame <- function(dataframe,cols){
+  
+  names <- names(dataframe)
+  for (col in cols) {
+    name <- paste(names[col], "imputed", sep = ".")
+    dataframe[name] = rand.impute(dataframe[,col])
+    
+  }
+  dataframe
+}
+```
+
+se sabe que los na son en las columnas 1 y 2 entonces..
+```{r message=FALSE, warning=FALSE}
+require(tidyverse)
+data <- read.csv("../data/tema1/missing-data.csv", na.strings = "")
+data$Income[data$Income==0] <- NA
+
+data <- random.impute.data.frame(data, c(1,2))
+data %>% View()
+```
+
+# Evitando duplicaciones de entradas
+
+Suponga lo siguiente
+
+```{r}
+family.salay <- c(40000,60000,50000,80000,60000,70000,60000)
+family.size <- c(4,3,2,2,3,4,3)
+family.car <- c("Lujo", "compacto", "utilitario", "Lujo", "compacto", "compacto", "compacto")
+```
+
+```{r}
+family <- data.frame(family.salay,family.size,family.car)
+family
+```
+
+Note entonces que a este momento, se tiene un df con obsrevaciones repetidas. 
+
+ *Funcioin unique()*
+
+```{r}
+family.unique <- unique(family)
+family.unique
+```
+
+Tambien, puedo ver si un dato es el duplicado de alguien
+
+```{r}
+duplicated(family)
+```
+```{r}
+family[duplicated(family),]
+```
+
+Asi se encuentra los valores que son duplicados del data set original
+
+# Reescalado lineal de datos
+
+Como reescalar una vble enntre dos valores, 0-1
+
+```{r}
+require(scales)
+
+```
+```{r}
+students <- read.csv("../data/tema1/data-conversion.csv")
+students
+```
+
+Vamos a reescalar la varibale income puesto que es necesario entender que la escala de los datos respecto a la edad es diferente. 
+
+```{r}
+students$Income.rescaled <- rescale(students$Income)
+students
+```
+El valor mas pequeño, lo toma como cero. 
+
+El valor mas grande, 1.
+
+```{r}
+(students$Income-min(students$Income))/(max(students$Income)-min(students$Income))
+```
+
+Es basicamente lo que hace la funcion rescale. 
+
+
+```{r}
+
+# reescalado en 0-100
+
+rescale(students$Income, to =c(0,100))
+```
+## Reescalando un df
+
+```{r}
+
+# Parametro: dataframe y columnas
+
+rescale.many <- function(dataframe, cols){
+  
+  names <- names(dataframe)
+  for(col in cols){
+    name = paste(names[col], "rescales", sep =".")
+    dataframe[name]<- rescale(dataframe[,col])
+  }
+  cat(paste("hemos reescalado", length(cols),"variable(s)"))
+  dataframe
+}
+```
+
+```{r}
+rescale.many(students, c(1,4))
+```
+
+# Normalizando o estandarizando un dataframe
+
+Vamos a estandarizar el df de boston houses.
+
+```{r}
+housing <- read.csv("../data/tema1/BostonHousing.csv")
+housing
+```
+
+```{r}
+housing.z <- scale(housing)
+
+```
+
+Con esto acaba de centrar con la distribucion normal. 
+
+Solo funciona SI TODAS LAS VARIABLES DEL DF SON NUMERICAS
+
+Normalizando varias variables de un df:
+
+```{r}
+scale.many = function(dataframe, cols){
+  names <- names(dataframe)
+  for(col in cols){
+    name <- paste(names[col], "z", sep = ".")
+    dataframe[name] <- scale(dataframe[,col])
+  }
+  cat(paste("Hemos normalizado ", length(cols), " variable(s)"))
+  dataframe
+}
+```
+
+
+```{r}
+housing <- scale.many(housing, c(1, 3, 5:8))
+```
+
+# Categorizando info numerica
+
+```{r}
+students <- read.csv("../data/tema1/data-conversion.csv")
+students
+```
+
+Suponga que nos interesa analizar el valor de la variable income con una variable categorica que resuma el nuvek de ingresos.
+
+Ej: 
+
+ income <10.000 <-> ingresos bajos
+ 
+Vamos entonces a crar un vector de breakpoints para las posibles categorias de la variable income
+
+```{r}
+bp <- c(-Inf, 10000,31000,Inf)
+names <- c("Low", "Average", "High")
+students$Income.cate <- cut(students$Income, breaks = bp, 
+                            labels = names)
+```
+```{r}
+students
+```
+##Intervalo de corte equitativo
+
+```{r}
+students$Income.cat2 <- cut(students$Income, 
+                            breaks = 4, 
+                            labels = c("l1","l2","l3","l4"))
+students
+
+```
+ Aqui R corta automaticamente para tener 4 breaks
+ 
+# Dummy variables / Variables ficticias
+
+Basicamente lo que quiero hacer es aplicar las metodologias numericas dado una tranfsormacion de categorias. 
+
+
+```{r}
+require(dummies)
+```
+
+
+```{r}
+students <- read.csv("../data/tema1/data-conversion.csv")
+
+```
+
+```{r}
+students.dummy <- dummy.data.frame(students, sep = ".")
+names(students.dummy)
+```
+
+```{r}
+students.dummy %>% view() # Muy parecidoa  regresion
+```
+
+```{r}
+dummy(students$State)
+```
+
+Tambien puedo especificar a quienes especificamente les quiero aplicar las variables dummies. 
+
+
+```{r}
+dummy.data.frame( students, 
+                 names =c("State", "Gender"),
+                 sep = ".")
+```
+
