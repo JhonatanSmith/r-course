@@ -345,3 +345,321 @@ dummy.data.frame( students,
                  sep = ".")
 ```
 
+# Eliminando informacion faltante
+
+Primero se hace un analisis para eliminar NA. 
+
+En general uno 1) Borra los datos NA, 2) Borra la variable con NA, 3) Tecnica de rellenado NA
+
+Con un df de house, vamos a trabajar con un df con missing values para practicar.
+
+```{r}
+
+housing.data <- read.csv("../data/tema1/housing-with-missing-value.csv", header = T, stringsAsFactors = F)
+
+```
+
+Tenemos algunos NA.
+
+```{r}
+summary(housing.data)
+```
+
+
+
+Note que la variable rad, me presenta 40 NA's. 
+
+ptratio tambien tiene 40 NA's.
+
+Esto ya es un motivo de preocupacion ¿Por que? Pregunra a realizarse. 
+
+## Formas para desaparecer estos NA's
+
+*Primer variante*
+
+```{r}
+
+housing.data.1<- na.omit(housing.data)
+summary(housing.data.1)
+```
+
+
+
+Al analizar cd uno de los dataframe, podria llevar a perdida de informacion.
+
+Esto es algo que ha de evaluarse en la practica. 
+
+Esta es la solucion de las mas bestias. 
+
+*Opcion 2: Elimino NA pero solo de una columna*
+
+Yo solo quiero eliminar NA de los rad (para el ejemplo)
+
+```{r}
+drop_na <- c("rad") # de las que tienen NA, las que quiero conservar
+housing.data.2 <- housing.data[ 
+  complete.cases(housing.data[,!(names(housing.data))%in% drop_na])  ,]
+```
+
+Esto ha hecho desaparecer los NA de todas las columnas menos de rad. 
+
+```{r}
+summary(housing.data.2)
+```
+
+
+Ya no tenemos NA en el df. Menos en rat
+
+*Eliminando toda la columna del df*
+
+```{r}
+housing.data$rad <- NULL # Esto hace que se me eliminen todas las variables 
+```
+
+
+
+O si quisiera cargarme mas columans...
+
+```{r}
+housing.data <- read.csv("../data/tema1/housing-with-missing-value.csv", header = T, stringsAsFactors = F)
+
+drops <- c("rad", "ptratio")
+housins.data.3 <- housing.data[,!names(housing.data)%in% drops]
+```
+
+```{r}
+summary(housins.data.3)
+```
+
+Note que este ahora tiene menos las columnas que selecioné.
+
+# Formas de completar informacion
+
+```{r}
+#install.packages("Hmisc")
+require(Hmisc)
+```
+
+La idea es que, yo quiero reemplazar los NA's por otros valores conocidos 
+
+```{r}
+housing.data <- read.csv("../data/tema1/housing-with-missing-value.csv", header = T, stringsAsFactors = F)
+
+housing.data.copy1 <- housing.data 
+
+housing.data.copy1$ptratio <- impute(housing.data.copy1$ptratio, mean)
+housing.data.copy1$rat <- impute(housing.data.copy1$rat, mean)
+
+```
+
+Aqui simplemente con la funcion impute, se le calcula el promedio y se reemplza en los espacios na.
+
+```{r}
+housing.data.copy1 %>% summary()
+```
+Mier que ya ninguno de los dos tiene NA
+
+```{r}
+housing.data.copy2 <- housing.data
+
+housing.data.copy2$ptratio <- impute(housing.data.copy2$ptratio, median)
+housing.data.copy2$rat <- impute(housing.data.copy2$rat, median)
+housing.data.copy2 %>% summary()
+```
+
+Reemplazamos por la mediana. Esto afecta logicamente las estimaciones de las dos variables
+
+```{r}
+
+housing.data.copy3 <- housing.data
+
+housing.data.copy3$ptratio <- impute(housing.data.copy3$ptratio, 18)
+housing.data.copy3$rat <- impute(housing.data.copy3$rat, 7)
+housing.data.copy3 %>% summary()
+
+```
+Se rellena con las constantes que yo quiera. 
+
+# Visualizando los NA
+
+Uno de los problemas a preguntarse es, ¿como se ve la informacion que falta?
+
+Este paquete permite visualizar los NA
+
+```{r}
+# install.packages("mice")
+```
+
+```{r}
+require(mice)
+md.pattern(housing.data)
+```
+
+¿Como se lee esta tabla?
+
+Tenemos 431 observaciones donde se conocen todas las variables
+
+Hay 35 observaciones donde no se conoce a prtario
+
+Hay 35 observaciones donde no se conoce a rad
+
+Hay 5 observaciones donde no se conoce ptaratio ni rad
+
+Hay un total de 40 observaciones NA
+
+```{r}
+#install.packages("VIM")
+require(VIM)
+```
+
+```{r}
+aggr(housing.data)
+```
+
+Otro grafico para ver NA
+
+La funcion aggr permite entender la informacion que falta. Se puede modificar.
+
+```{r}
+aggr(housing.data, col = c("green", "red"), numbers = T)
+
+```
+
+
+Aqui estamos viendo, un porcentaje para los datos faltantes. Esto ayudaria a ver si la proporcion de NA es alta o no, si es trbajable o NO. 
+
+```{r}
+aggr(housing.data, col = c("green", "red"), numbers = T,
+     sortVars = T, 
+     labels = names(housing.data))
+
+```
+
+
+Nuevamente, este es el mismo grafico pero organizado desde la que mas falta a la que menos falta
+
+*Modificando el grafico*
+
+Una forma de modificar ese grafico es con el parametro cex.axis que es el tamaño de la fuente
+
+gap: parametro que modifica el huevo entre los dos graficos que se muestran. Por defecto viene en 5, vamos a moverlo. Note como esto modifica la "estrechez" del grafico. 
+
+xlab, ylab - ya c para que es
+
+```{r}
+aggr(housing.data, col = c("green", "red"), numbers = T,
+     sortVars = T, 
+     labels = names(housing.data),
+     cex.axis = 0.7,
+     gap = 2,
+     ylab = c("Histograma de NA", "Patron"))
+
+```
+# Correcion de datos
+
+## Funcion Gather
+
+
+```{r}
+require(tidyr)
+
+crime.data <- read.csv("../data/tema1/USArrests.csv", stringsAsFactors = F)
+crime.data
+```
+
+La funcion cbind sirve oara unir una o mas columnas al dataframe original
+
+```{r}
+crime.data <- cbind(state = rownames(crime.data), crime.data)
+crime.data
+
+```
+
+Se acaba de agregar una columna con los nombres de las filas. COmo las filas no tnian nombres simplemente las enumeró.
+
+Ahora, *Vamos a unir dos variables*
+
+```{r}
+crime.data1 <- gather( crime.data, # dataframe de partida
+                       key = "crime_type",  # nombre de la columna clave
+                       value = "arrest_estimate", # nombre de la columna valor
+                       Murder:UrbanPop) # nombres de las columnas a reunir
+```
+
+
+Lo que ha hecho esta funcion es unir 
+
+```{r}
+crime.data2 <- gather(crime.data,
+                      key = "crime_type",
+                      value = "arrested_estimamte",
+                      -state) # coja todas las variables menos la que le dije
+```
+
+Aqui estoy uniendo todo en unna unica columna. Mire que toda la informacion queda resumida en un unica columna de datos 
+
+```{r}
+crime.data3 <- gather(crime.data,
+                      key = "crime_type",
+                      value = "arrest_estimate",
+                      Murder, Assault)
+```
+
+
+Esta es la forma de utilizar la funcion gather. 
+
+
+## Funcion spread
+
+Partir de una base de datos que ya está unida para luego separarla. Este es un paso inverso al proceso anterior.
+
+
+```{r}
+crime.data.4 <- spread(crime.data2,
+                       key = "crime_type",
+                       value = "arrested_estimamte")
+```
+
+## Uniendo 
+
+Mire este trucazo papa
+
+```{r}
+crime.data.5 <- unite(crime.data, col = "Murder_assault",
+                      Murder, Assault,
+                      sep ="_")
+crime.data.5 %>% head
+```
+
+basicamente cogio la base de datos original y le creo una nueva columba uniendo dos variables. 
+
+Melo.Ahora, la operacion contraria es separar una columna en dos o mas, se hace lo siguiente. 
+
+
+```{r}
+crime.data.6 <- separate(crime.data.5,
+                         col = "Murder_assault",
+                         into= c("Muerder", "Assault"),
+                         sep = "_")
+crime.data.6 %>% head()
+```
+
+
+Los separamos melisimo. 
+
+
+# Modelos predictivos para llenar datos
+
+
+
+
+
+
+
+
+
+
+
+
+
+
