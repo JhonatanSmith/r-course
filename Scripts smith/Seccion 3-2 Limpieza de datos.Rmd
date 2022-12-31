@@ -650,16 +650,118 @@ Los separamos melisimo.
 
 # Modelos predictivos para llenar datos
 
+Vamos a aplicar tecnicas de completacion multivariante usando modelos predictivos para rellenar los datos faltantes. Esto es lo mas GOD que podemos hacer por ahora
+
+```{r}
+require(mice)
+housing.data <- read.csv("../data/tema1/housing-with-missing-value.csv",
+                         header = T,
+                         stringsAsFactors = F)
+
+columns <- c("ptratio", "rad") # las columnas con problemas de NA
+
+imputed_data <- mice(housing.data[,names(housing.data)%in% columns],
+                     seed = 2018,
+                     m = 5,# 5 valores diferentes de cd iteracion
+                     maxit = 50, # 50 iteracioes
+                     method = "pmm")  #predicted mean matched, existen 4
+
+# pmm - comparacion predictiva de medias
+# logreg - regresion logistica
+# polyreg - regresion logistica polinomial
+# polr - modelo de probabilidades proporcionales
+
+```
 
 
+Esto de aca es solo el modelo. Hay que usarlo para predecir los valores faltantes
+
+```{r}
+imputed_data %>% summary()
+```
+Entonces se va a usar el modelo para completar los datos faltantees
+
+```{r}
+complete.data <- complete(imputed_data)
+housing.data$ptratio <- complete.data$ptrario
+housing.data$rad <- complete.data$rad
+```
+
+```{r}
 
 
+anyNA(housing.data) # No Hay un NA
+```
+## Otra fomrma
+
+```{r}
+housing.data <- read.csv("../data/tema1/housing-with-missing-value.csv",
+                         header = T,
+                         stringsAsFactors = F)
+impute_arg <- aregImpute(~ptratio+rad, data = housing.data, 
+                          n.impute = 5)
+```
+Note que ahora esto es un modelo
+
+```{r}
+impute_arg
+```
+Note que ahora con el R cuadrado puedo mirar que tan buena es la prediccion de los NA.
+
+Recuerde, se desea un R cuadrado cercano a uno
+
+```{r}
+impute_arg$imputed$rad
+```
 
 
+Estas son las posibles tablas con los valores NA que se desean rellenar. 
+
+# Deteccion de outliers
 
 
+```{r}
+ozone.data <- read.csv("../data/tema1/ozone.csv", 
+                       stringsAsFactors = F)
+```
+
+Vamos a intentar detectar putliers
 
 
+Empecemos con la presion heigh para mirarm
+
+```{r}
+outliers_values <- ozone.data$pressure_height %>% boxplot(main = "Pressure Height", boxwex = 0.2)
+```
+
+Interpretacion de toda la vida de boxplot
+
+```{r}
+boxplot(ozone.data$pressure_height ~ ozone.data$Month)
+```
+
+```{r}
+boxplot(pressure_height ~ Month,
+        data = ozone.data,
+        main = "Pressure Height per Month")
+```
+
+en general, buscamos lo que esté fuera de las cajas
 
 
+```{r}
+boxplot(ozone_reading ~ Month, 
+        data =  ozone.data, 
+        main = "Ozone reading per month")
+
+```
+
+
+De manera general siempre buscamos tener con los boxplots los outliers a la manos. 
+```{r}
+boxplot( ozone.data$pressure_height ,main = "Pressure Height", boxwex = 0.2)$out
+mtext("hola caremonda")
+```
+
+Mire que ahora en consola tengo los outliers
 
