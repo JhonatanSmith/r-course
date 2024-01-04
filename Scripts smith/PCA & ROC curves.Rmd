@@ -1,0 +1,187 @@
+---
+title: "PCA & ROC Curves"
+author: "Jhonatan Smith"
+date: "2023-12-30"
+output: rmdformats::readthedown
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Librerias
+
+```{r}
+require(tidyverse)
+require(ROCR) # Para curvas ROC
+```
+
+
+# Analisis de PCA
+
+bueno, nada que no se haya visto hasta el momento. un breve ejemplo para ilustrarlo en R.
+
+
+```{r}
+userarrests = read.csv("../data/tema3/USArrests.csv", stringsAsFactors = F)
+userarrests %>% head
+```
+
+```{r}
+rownames(userarrests) = userarrests$X
+userarrests=userarrests[,-1]
+userarrests %>% head
+```
+
+Note lo siguiente:
+
+```{r}
+apply(userarrests, 2,var ) # var por columna
+```
+
+La varianza no tiene la misma escala por como estan digiatas las features. Entonces
+
+
+```{r}
+acp = prcomp(userarrests,
+             center = T, # Centra los datos
+             scale = T) # Escala los datos
+acp
+```
+Se tiene la matriz de rotacion para esta base de datos. 
+
+```{r}
+plot(acp, type = "l") # Si no se especifica, lo saca en baras
+```
+
+
+```{r}
+acp %>% summary
+
+```
+una forma rapida de ver la importancia asociada a cada componente principal. Con la acumulada vamos a quedarnos con las dos primeras componentes.
+
+```{r}
+biplot(acp, scale = 0)
+```
+
+
+Recuerde como se interpretan estos graficos. 
+
+```{r}
+acp$rotation[,c(1)] # la idea es quedarnos con estas dos componentes
+``` 
+
+```{r}
+userarrests %>% head
+```
+
+
+```{r}
+# se multiplica los valores de c/d componente por el vector y se uma
+pca1 = apply(acp$rotation[,1]*userarrests,1, sum)
+pca2 = apply(acp$rotation[,2]*userarrests, 1, sum)
+pca1 %>% head
+```
+
+```{r}
+userarrests$pca1 = pca1
+userarrests$pca2 = pca2
+userarrests %>% head
+```
+Con esto, podriamos eliminar las variables que no se usen, quedandonos con pca1 y pca2.
+
+
+# Curvas ROC
+
+Estas son curvas que permiten cuantificar la probabilidad de equivocarse a la hora de clasificar. Vamos a tomar el siguiente ejemplo.
+
+```{r}
+data1 = read.csv("../data/tema3/roc-example-1.csv")
+data2 = read.csv("../data/tema3/roc-example-2.csv")
+
+data1 %>% head
+```
+Esta data tiene ya tiene una probabildad y una categoria. Lo que nos dice el primer registro es que por ejemplo, el primer dato tiene un 99% de probabiliad de pertenecer a la clase 1. Y asi sucesivamente. Suponga que 1 es exito y 0 es fallo. 
+
+El siguiente codigo identifica cuando una prediccion es un verdadero positivo (clasificacion correcta) y un falso positivo (clasificacion incorrecta) -Los que eran malos se colocan malos, los que eran buenos se colocan buenos vs los que eran malos se colocan buenos y los que eran buenos se colocan malos -
+
+```{r}
+pred1 = prediction(data1$prob, data1$class) # objeto del paquete ROC
+performance1 = performance(pred1, "tpr", # true positive rate
+                           "fpr") # false positive rate
+plot(performance1)
+```
+
+La forma de interpretar esta curva roc es la siguiente:
+
+A medida en que aumenta los verdaderos el ratio de los verdaderos positivos, la probabilidad de equivocarse al clasificar (Esto es, tener ub falso positivo) aumenta.
+
+por ejemplo en este grafico al tener un ratio de casi el 80% de aciertos, vamos a tener mas o menos poco mas del 20 y tanto % de ratio de equivocarse.
+
+Esto implica que si intento tener un ratio de predecir correctamente la categoria, implica que cerca del 20 y tanto % de esas predicciones van a tener errores. 
+
+Por ejemplo en la curva la pareja (0.4, 0.8 y algo) se podria interpretar como que al intentar tener poco mas del 80 y algo porciento de verdaderos positivos voy a cometer errores de falsos positivos un ratio de 40 
+
+
+Ahora, *Como seleccionamos estas probabilidades?*
+
+```{r}
+prob.cuts.1 = data.frame(cut = performance1@alpha.values[[1]],
+                         fpr = performance1@x.values[[1]],
+                         tpr = performance1@y.values[[1]])
+prob.cuts.1 %>% head
+```
+
+La primera obersvacion es: Dado que el algoritmo lo clasifica como 1 (Es certeza absoluta de que se clasifica correctamente) entonces la probabilidadde fpr es cero y la la probabiliad de tpr es cero. 
+
+Ahora, mientras cut va disminuyendo (El algoritmo baja la probabilidad de que un sujeto pertenezca a dicha categoria) entonces el fpr va aumentando a medida que lo hace tpr
+
+```{r}
+prob.cuts.1 %>% tail
+```
+
+Vamos a intentar quedarnos con una tasa con tpr del 80% entonces
+
+```{r}
+prob.cuts.1[prob.cuts.1$tpr>=0.8,]
+```
+
+Segun esto, entonces miremos que con una tpr de cerca del 81% (observacion 55) se podria tomar que las observaciones que tengan una probabilidad mayor o igual a ese corte (0.49815058) se podrian considerar como exitos y la tasa de error sera del 0.21% aprox
+
+En otras palabras, le pegamos al 81% de las veces y de esas 81 van a estar equivocadas cerca del 21% de las veces. El threshold o la probabilidad que determinará el exito son las probabilidadesmayores a 0.498 y ese restod e numeros
+
+
+## Ejemplo 2 curva ROC
+
+```{r}
+pred2 = prediction(data2$prob, data2$class, 
+                   label.ordering = c("non-buyer", "buyer"))
+
+perf2 = performance(pred2, "tpr", "fpr")
+
+plot(perf2)
+```
+
+```{r}
+require()
+```
+
+
+```{python}
+print("Holii")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
